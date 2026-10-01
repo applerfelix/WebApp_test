@@ -359,6 +359,52 @@ textarea.input.expanded { height: 16rem; min-height: 10rem; }
 .comment-meta { margin: 0 0 2px; font-size: 0.78rem; color: var(--text-muted); }
 .comment-text { margin: 0; white-space: pre-wrap; }
 
+/* Quoted span an anchored comment refers to */
+.comment-anchor {
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--border);
+  background: #f3f4f6;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text);
+  white-space: pre-wrap;
+  border-radius: 0 4px 4px 0;
+}
+
+.locate-anchor { margin: 2px 0 6px; }
+
+/* Brief highlight when "Locate in answer" jumps to a field */
+.field.anchor-flash {
+  animation: anchor-flash 1.5s ease-out;
+}
+
+@keyframes anchor-flash {
+  0%   { box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.55); background: #fffbeb; }
+  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); background: transparent; }
+}
+
+/* Read-only quoted-text box in the comment dialog */
+.comment-anchor-box {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #b45309;
+  border-radius: 4px;
+  background: #f9fafb;
+  font-size: 0.85rem;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.comment-anchor-box label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-style: normal;
+}
+
 /* ===== Buttons ===== */
 
 button {

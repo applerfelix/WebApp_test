@@ -136,6 +136,13 @@ field-level version history.
   (removed words struck through, added words highlighted);
   previous/current side by side for `integer`, `decimal`, `boolean`
   and `date`.
+- **Anchored comments**: on a `longtext` answer, select part of the
+  text and click **Comment on selection** to attach a comment to that
+  span. The comment stores the quoted text and its character offsets;
+  in the thread it shows the quote and a **Locate in answer** button
+  that scrolls to the field and highlights the span. Comments without
+  a selection (the plain **Add comment** button, or "Request revision")
+  are whole-question comments.
 
 ---
 
@@ -232,6 +239,12 @@ and the status summary.
     column, has a duplicate `question_id`, an unknown `question_type`,
     or inconsistent `repeat_by` within a group; the import dialog lists
     errors and the questionnaire is **not** updated.
+16. **Anchored comment**: on a `longtext` answer, select a phrase and
+    click "Comment on selection"; the dialog shows the quoted text above
+    the comment box. Save; the comment thread shows the quote and a
+    "Locate in answer" button. Clicking it scrolls to the field, selects
+    the span, and flashes the field. Clicking "Comment on selection"
+    with no text selected shows a notice instead of opening the dialog.
 
 ---
 

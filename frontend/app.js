@@ -1059,6 +1059,7 @@ function renderField(inst, field, editable) {
   wrapper.append(label, buildFieldInput(field, editable));
   if (field.questionType === 'longtext') {
     wrapper.append(buildExpandButton(inst, field));
+    wrapper.append(buildCommentSelectionButton(inst, field));
   }
 
   if (field.helpText) {
@@ -1151,6 +1152,23 @@ function buildExpandButton(inst, field) {
       'aria-controls': `input-${fieldId}`,
     },
     dataset: { action: 'toggle-expand', unitId: inst.id, fieldId },
+  });
+}
+
+/**
+ * "Comment on selection" button for longtext fields. It opens the comment
+ * dialog anchored to whatever text is selected in the answer box.
+ */
+function buildCommentSelectionButton(inst, field) {
+  const fieldId = field.questionInstanceId;
+  return el('button', {
+    class: 'secondary small comment-selection-toggle',
+    text: 'Comment on selection',
+    attrs: {
+      'aria-controls': `input-${fieldId}`,
+      title: 'Select part of the answer text, then click to comment on that selection',
+    },
+    dataset: { action: 'comment-selection', unitId: inst.id, fieldId },
   });
 }
 
@@ -1296,6 +1314,7 @@ function renderMatrixRow(inst) {
   const inputCell = el('div', { class: 'matrix-input' }, [buildFieldInput(field, editable)]);
   if (field.questionType === 'longtext') {
     inputCell.append(buildExpandButton(inst, field));
+    inputCell.append(buildCommentSelectionButton(inst, field));
   }
   row.append(inputCell);
 
@@ -1325,10 +1344,28 @@ function renderCommentThread(inst, headingText) {
   }
   // Chronological order: comments read like a conversation.
   for (const comment of comments) {
-    section.append(el('div', { class: `comment comment-${comment.author_role.toLowerCase()}` }, [
+    const body = [
       el('p', { class: 'comment-meta', text: `${comment.author_role} · ${formatTimestamp(comment.timestamp)}` }),
-      el('p', { class: 'comment-text', text: comment.comment_text }),
-    ]));
+    ];
+    // Anchored comments quote the selected span and offer a "Locate"
+    // button that jumps to it in the answer.
+    if (comment.anchor_text) {
+      body.push(el('blockquote', { class: 'comment-anchor', text: comment.anchor_text }));
+      body.push(el('button', {
+        class: 'secondary small locate-anchor',
+        text: 'Locate in answer',
+        attrs: { 'aria-label': 'Scroll to and highlight the quoted text in the answer' },
+        dataset: {
+          action: 'locate-anchor',
+          unitId: inst.id,
+          fieldId: comment.field_id,
+          anchorStart: String(comment.anchor_start),
+          anchorEnd: String(comment.anchor_end),
+        },
+      }));
+    }
+    body.push(el('p', { class: 'comment-text', text: comment.comment_text }));
+    section.append(el('div', { class: `comment comment-${comment.author_role.toLowerCase()}` }, body));
   }
   return section;
 }
@@ -1642,10 +1679,10 @@ function renderWordDiff(oldText, newText) {
    13. Comments
    --------------------------------------------------------------------- */
 
-let commentDialogContext = null; // { inst, mode: 'comment' | 'revision' }
+let commentDialogContext = null; // { inst, mode: 'comment' | 'revision', anchor: null | {...} }
 
-function openCommentDialog(inst, mode) {
-  commentDialogContext = { inst, mode };
+function openCommentDialog(inst, mode, anchor) {
+  commentDialogContext = { inst, mode, anchor: anchor || null };
   const isRevision = mode === 'revision';
 
   document.getElementById('comment-title').textContent = isRevision ? 'Request revision' : 'Add comment';
@@ -1653,6 +1690,17 @@ function openCommentDialog(inst, mode) {
     `${unitContextText(inst)}` +
     (isRevision ? ' — the status changes to "Revision requested"; a comment explaining the change is required.' : '');
   document.getElementById('comment-submit').textContent = isRevision ? 'Request revision' : 'Save comment';
+
+  // Quoted-text box: shown only when the comment is anchored to a
+  // selection of the answer text.
+  const anchorBox = document.getElementById('comment-anchor');
+  const anchorValue = document.getElementById('comment-anchor-text');
+  if (anchor) {
+    anchorValue.textContent = anchor.text;
+    anchorBox.hidden = false;
+  } else {
+    anchorBox.hidden = true;
+  }
 
   const textarea = document.getElementById('comment-text');
   textarea.value = '';
@@ -1662,19 +1710,75 @@ function openCommentDialog(inst, mode) {
 }
 
 /**
+ * Scroll to a longtext field and select the span a comment is anchored to,
+ * with a brief highlight flash. Offsets are character positions into the
+ * current value; if the answer has since changed the span may not match
+ * the original quote, but the selection still points to the same region.
+ */
+function locateAnchor(button) {
+  const fieldId = button.dataset.fieldId;
+  const input = document.getElementById(`input-${fieldId}`);
+  if (!input) return;
+  const start = parseInt(button.dataset.anchorStart, 10);
+  const end = parseInt(button.dataset.anchorEnd, 10);
+  input.focus();
+  input.setSelectionRange(start, end);
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Flash the field wrapper briefly to draw the eye.
+  const wrapper = input.closest('.field');
+  if (wrapper) {
+    wrapper.classList.add('anchor-flash');
+    setTimeout(() => wrapper.classList.remove('anchor-flash'), 1500);
+  }
+}
+
+/**
+ * Open the comment dialog anchored to the text currently selected in a
+ * longtext answer. Reads the textarea's selection offsets at click time;
+ * if nothing is selected, tells the user to select some text first.
+ */
+function openCommentOnSelection(inst, fieldId) {
+  const input = document.getElementById(`input-${fieldId}`);
+  if (!input) return;
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  if (start === null || end === null || start === end) {
+    setNotice('Select some of the answer text first, then click "Comment on selection".');
+    return;
+  }
+  const value = input.value;
+  const anchor = {
+    fieldId,
+    start,
+    end,
+    text: value.slice(start, end),
+  };
+  openCommentDialog(inst, 'comment', anchor);
+}
+
+/**
  * Append an immutable comment. Comments are stored in a separate
  * structure from answer versions: adding a comment never creates an
  * answer version.
  */
-function addComment(reviewUnitId, text) {
+function addComment(reviewUnitId, text, anchor) {
   const thread = state.comments[reviewUnitId] || [];
-  thread.push({
+  const comment = {
     comment_id: `${reviewUnitId}__c${thread.length + 1}__${Date.now()}`,
     review_unit_id: reviewUnitId,
     author_role: ROLES[state.role],
     timestamp: new Date().toISOString(),
     comment_text: text,
-  });
+  };
+  // Optional anchor: ties the comment to a span of a longtext answer.
+  // Absent (or null) fields mean a whole-question comment.
+  if (anchor) {
+    comment.field_id = anchor.fieldId;
+    comment.anchor_start = anchor.start;
+    comment.anchor_end = anchor.end;
+    comment.anchor_text = anchor.text;
+  }
+  thread.push(comment);
   state.comments[reviewUnitId] = thread;
 }
 
@@ -1692,8 +1796,8 @@ function handleCommentSubmit(event) {
     return;
   }
 
-  const { inst, mode } = commentDialogContext;
-  addComment(inst.id, text);
+  const { inst, mode, anchor } = commentDialogContext;
+  addComment(inst.id, text, anchor);
   if (mode === 'revision') {
     // Status change only — never creates an answer version.
     state.statuses[inst.id] = 'revision_requested';
@@ -1938,6 +2042,8 @@ function handleQuestionnaireClick(event) {
     case 'accept': handleAcceptUnit(inst); break;
     case 'reopen': handleReopenUnit(inst); break;
     case 'comment': openCommentDialog(inst, 'comment'); break;
+    case 'comment-selection': openCommentOnSelection(inst, button.dataset.fieldId); break;
+    case 'locate-anchor': locateAnchor(button); break;
     case 'toggle-expand': {
       // Expand/collapse the longtext box in place — no re-render, so the
       // typing focus and scroll position are preserved.

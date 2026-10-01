@@ -69,6 +69,10 @@
     <form id="comment-form" novalidate>
       <h2 id="comment-title">Add comment</h2>
       <p id="comment-context" class="dialog-context"></p>
+      <div id="comment-anchor" class="comment-anchor-box" hidden>
+        <label for="comment-anchor-text">Quoted text (selected from the answer)</label>
+        <div id="comment-anchor-text"></div>
+      </div>
       <div class="form-row">
         <label for="comment-text">Comment</label>
         <textarea id="comment-text" rows="4" maxlength="1000" required></textarea>
