@@ -819,6 +819,10 @@ let instances = [];      // derived from state.spec on every render
 let statusFilter = 'all';
 let pendingImportSpec = null;
 
+// Field ids of longtext answer boxes the user has expanded. View
+// preference only — kept in memory, not questionnaire data.
+const expandedLongtextFields = new Set();
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -1053,6 +1057,9 @@ function renderField(inst, field, editable) {
     label.append(el('span', { class: 'required-mark', attrs: { 'aria-hidden': 'true' }, text: ' *' }));
   }
   wrapper.append(label, buildFieldInput(field, editable));
+  if (field.questionType === 'longtext') {
+    wrapper.append(buildExpandButton(inst, field));
+  }
 
   if (field.helpText) {
     wrapper.append(el('p', { class: 'help-text', text: field.helpText }));
@@ -1104,9 +1111,13 @@ function buildFieldInput(field, editable) {
   if (!editable) props.disabled = true;
 
   if (tag === 'textarea') {
+    // Longtext boxes start collapsed (2 rows) to keep the page compact
+    // and can be expanded with the toggle button next to them.
+    const isExpanded = expandedLongtextFields.has(field.questionInstanceId);
     return el('textarea', {
-      class: 'input', id: inputId,
-      attrs: Object.assign({ rows: '4' }, attrs),
+      class: isExpanded ? 'input longtext expanded' : 'input longtext',
+      id: inputId,
+      attrs: Object.assign({ rows: '2' }, attrs),
       props, dataset: { fieldId: field.questionInstanceId },
     });
   }
@@ -1121,6 +1132,25 @@ function buildFieldInput(field, editable) {
     class: 'input', id: inputId,
     attrs: Object.assign({ type }, attrs),
     props, dataset: { fieldId: field.questionInstanceId },
+  });
+}
+
+/**
+ * Expand/collapse toggle for longtext answer boxes. Toggling happens in
+ * place (see the 'toggle-expand' case in handleQuestionnaireClick), so
+ * the text being typed and the scroll position are not disturbed.
+ */
+function buildExpandButton(inst, field) {
+  const fieldId = field.questionInstanceId;
+  const isExpanded = expandedLongtextFields.has(fieldId);
+  return el('button', {
+    class: 'secondary small expand-toggle',
+    text: isExpanded ? 'Collapse' : 'Expand',
+    attrs: {
+      'aria-expanded': String(isExpanded),
+      'aria-controls': `input-${fieldId}`,
+    },
+    dataset: { action: 'toggle-expand', unitId: inst.id, fieldId },
   });
 }
 
@@ -1262,8 +1292,12 @@ function renderMatrixRow(inst) {
     }),
   ]));
 
-  // Middle column: the answer control.
-  row.append(el('div', { class: 'matrix-input' }, [buildFieldInput(field, editable)]));
+  // Middle column: the answer control (longtext boxes get a toggle).
+  const inputCell = el('div', { class: 'matrix-input' }, [buildFieldInput(field, editable)]);
+  if (field.questionType === 'longtext') {
+    inputCell.append(buildExpandButton(inst, field));
+  }
+  row.append(inputCell);
 
   // Right column: current status and compact workflow buttons.
   row.append(el('div', { class: 'matrix-actions' }, [
@@ -1904,6 +1938,20 @@ function handleQuestionnaireClick(event) {
     case 'accept': handleAcceptUnit(inst); break;
     case 'reopen': handleReopenUnit(inst); break;
     case 'comment': openCommentDialog(inst, 'comment'); break;
+    case 'toggle-expand': {
+      // Expand/collapse the longtext box in place — no re-render, so the
+      // typing focus and scroll position are preserved.
+      const fieldId = button.dataset.fieldId;
+      const input = document.getElementById(`input-${fieldId}`);
+      const expand = !expandedLongtextFields.has(fieldId);
+      if (expand) expandedLongtextFields.add(fieldId);
+      else expandedLongtextFields.delete(fieldId);
+      input.classList.toggle('expanded', expand);
+      button.textContent = expand ? 'Collapse' : 'Expand';
+      button.setAttribute('aria-expanded', String(expand));
+      if (expand) input.focus();
+      break;
+    }
     case 'history': {
       const field = inst.fields.find((f) => f.questionInstanceId === button.dataset.fieldId);
       if (field) openHistoryDialog(inst, field);

@@ -283,6 +283,14 @@ textarea:focus-visible {
 
 .input:disabled { background: #f3f4f6; color: var(--text-muted); }
 
+/* Longtext answer boxes: compact by default, expanded via the toggle
+   button; manual drag-resize stays possible in both states. */
+textarea.input { resize: vertical; }
+
+textarea.input.expanded { height: 16rem; min-height: 10rem; }
+
+.expand-toggle { margin-top: 4px; }
+
 .help-text {
   margin: 4px 0 0;
   font-size: 0.82rem;
