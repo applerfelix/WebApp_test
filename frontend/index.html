@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel-driven questionnaire review — prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== Header: title and role switcher ===== -->
+  <header class="app-header">
+    <div>
+      <h1>Excel-driven questionnaire review</h1>
+      <p class="subtitle">Metadata-driven questionnaire with answer-level versioning — local prototype</p>
+    </div>
+    <div class="role-switcher" role="group" aria-label="Select your role">
+      <button type="button" id="role-respondent" class="role-btn" aria-pressed="true">Respondent</button>
+      <button type="button" id="role-researcher" class="role-btn" aria-pressed="false">Researcher</button>
+    </div>
+  </header>
+
+  <!-- ===== Toolbar: import, sample, persistence and export controls ===== -->
+  <section class="toolbar" aria-label="Specification and prototype data">
+    <div class="import-area">
+      <label class="file-label" for="file-input">Import Excel specification (.xlsx)</label>
+      <input type="file" id="file-input" accept=".xlsx">
+      <button type="button" id="btn-load-sample" class="secondary">Load sample specification</button>
+      <button type="button" id="btn-reload" class="secondary">Reload saved specification</button>
+      <button type="button" id="btn-export" class="secondary">Export all data (JSON)</button>
+      <button type="button" id="btn-reset-responses" class="secondary">Reset responses and history</button>
+      <button type="button" id="btn-reset-all" class="danger">Reset all prototype data</button>
+    </div>
+    <p id="spec-info" class="spec-info"></p>
+    <p id="app-notice" class="app-notice" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- ===== Status summary and filter ===== -->
+  <section class="summary" aria-labelledby="summary-heading">
+    <div class="summary-head">
+      <h2 id="summary-heading">Review status summary</h2>
+      <label class="filter-label" for="status-filter">Filter by status</label>
+      <select id="status-filter">
+        <option value="all">All statuses</option>
+      </select>
+    </div>
+    <div id="status-summary" class="summary-chips" aria-live="polite"></div>
+  </section>
+
+  <!-- ===== Questionnaire (rendered by app.js) ===== -->
+  <main id="questionnaire" class="questionnaire"></main>
+
+  <footer class="app-footer">
+    <p>All data is stored only in this browser via localStorage. This is a demonstration prototype: storage is not secure and not production-ready. See README.md.</p>
+  </footer>
+
+  <!-- ===== Dialog: answer version history (read-only) ===== -->
+  <dialog id="history-dialog" aria-labelledby="history-title">
+    <h2 id="history-title">Answer history</h2>
+    <p id="history-context" class="dialog-context"></p>
+    <div id="history-content" class="history-content"></div>
+    <menu class="dialog-actions">
+      <li><button type="button" id="history-close" class="secondary">Close</button></li>
+    </menu>
+  </dialog>
+
+  <!-- ===== Dialog: add comment / request revision ===== -->
+  <dialog id="comment-dialog" aria-labelledby="comment-title">
+    <form id="comment-form" novalidate>
+      <h2 id="comment-title">Add comment</h2>
+      <p id="comment-context" class="dialog-context"></p>
+      <div class="form-row">
+        <label for="comment-text">Comment</label>
+        <textarea id="comment-text" rows="4" maxlength="1000" required></textarea>
+      </div>
+      <p id="comment-error" class="form-error" role="alert" hidden></p>
+      <menu class="dialog-actions">
+        <li><button type="button" id="comment-cancel" class="secondary">Cancel</button></li>
+        <li><button type="submit" id="comment-submit" class="primary">Save comment</button></li>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- ===== Dialog: import summary and validation report ===== -->
+  <dialog id="import-dialog" aria-labelledby="import-title">
+    <h2 id="import-title">Import summary</h2>
+    <div id="import-content" class="import-content"></div>
+    <menu class="dialog-actions">
+      <li><button type="button" id="import-close" class="secondary">Close</button></li>
+      <li><button type="button" id="import-apply" class="primary" hidden>Use this specification</button></li>
+    </menu>
+  </dialog>
+
+  <!-- SheetJS from CDN: an internet connection is required on first load.
+       See README.md for running fully offline with a local copy. -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

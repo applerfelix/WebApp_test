@@ -1,0 +1,578 @@
+/* =====================================================================
+   Styles for the Excel-driven questionnaire prototype.
+   Plain CSS, no frameworks. Functional and accessible rather than
+   decorative: strong focus states and colour contrast throughout.
+   ===================================================================== */
+
+:root {
+  --text: #1f2937;
+  --text-muted: #4b5563;
+  --background: #f3f4f6;
+  --surface: #ffffff;
+  --border: #d1d5db;
+
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+
+  --diff-removed-bg: #fecaca;
+  --diff-removed-text: #7f1d1d;
+  --diff-added-bg: #bbf7d0;
+  --diff-added-text: #14532d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--background);
+}
+
+/* Visible keyboard focus everywhere */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* ===== Header ===== */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 { margin: 0; font-size: 1.25rem; }
+
+.subtitle { margin: 2px 0 0; color: var(--text-muted); font-size: 0.85rem; }
+
+.role-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.role-btn {
+  padding: 8px 16px;
+  border: none;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.role-btn[aria-pressed="true"] {
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ===== Toolbar (import, persistence, export) ===== */
+
+.toolbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+}
+
+.import-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.file-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.spec-info {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.app-notice {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: #1e40af;
+  min-height: 1.2em;
+}
+
+/* ===== Status summary and filter ===== */
+
+.summary {
+  max-width: 960px;
+  margin: 16px auto 0;
+  padding: 0 24px;
+}
+
+.summary-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.summary-head h2 { font-size: 1rem; margin: 0; }
+
+.filter-label { font-size: 0.85rem; font-weight: 600; }
+
+#status-filter {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.summary-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.summary-count { font-weight: 700; }
+
+/* ===== Status badges (dark text on light tints for contrast) ===== */
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-draft { background: #e5e7eb; color: #374151; }
+.status-submitted { background: #dbeafe; color: #1e40af; }
+.status-revision_requested { background: #fef3c7; color: #92400e; }
+.status-revised { background: #ede9fe; color: #5b21b6; }
+.status-accepted { background: #dcfce7; color: #166534; }
+
+.sector-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #e0f2fe;
+  color: #075985;
+  white-space: nowrap;
+}
+
+/* ===== Questionnaire layout ===== */
+
+.questionnaire {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 24px 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.section-heading {
+  font-size: 1.15rem;
+  margin: 20px 0 0;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.subsection-heading {
+  font-size: 0.95rem;
+  margin: 14px 0 0;
+  color: var(--text-muted);
+}
+
+/* ===== Empty state ===== */
+
+.empty-state {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.empty-state h2 { margin-top: 0; }
+.empty-state ol { margin-bottom: 16px; }
+
+/* ===== Review unit card ===== */
+
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+
+.question-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.question-title { margin: 0; font-size: 1.05rem; flex: 1 1 auto; }
+
+/* Grouped fields: stacked by default; side_by_side groups become a
+   responsive grid that stacks again on narrow screens. */
+.group-fields {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  border: none;
+  padding: 0;
+  margin-inline: 0;
+  min-inline-size: 0;
+}
+
+.group-fields.side-by-side {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .group-fields.side-by-side { grid-template-columns: 1fr; }
+}
+
+/* ===== Fields ===== */
+
+.field-label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+/* Accessible fallback label for grouped fields with no question_text:
+   present for screen readers and keyboard users, visually quiet. */
+.field-label.subtle { font-weight: 400; font-size: 0.82rem; color: var(--text-muted); }
+
+.required-mark { color: var(--danger); font-weight: 700; }
+
+.input {
+  width: 100%;
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.input:disabled { background: #f3f4f6; color: var(--text-muted); }
+
+.help-text {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.current-answer-line {
+  margin: 8px 0 4px;
+  font-size: 0.85rem;
+}
+
+.current-answer-label { color: var(--text-muted); }
+
+.current-answer-value {
+  display: inline-block;
+  white-space: pre-wrap;
+  font-weight: 600;
+}
+
+.muted { color: var(--text-muted); }
+.small { font-size: 0.85rem; }
+
+/* ===== Unit actions ===== */
+
+.unit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.change-note-label { font-size: 0.85rem; font-weight: 600; }
+
+.change-note {
+  width: 260px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+/* ===== Comments ===== */
+
+.comments {
+  margin-top: 16px;
+  border-top: 1px dashed var(--border);
+  padding-top: 12px;
+}
+
+.comments-heading { margin: 0 0 8px; font-size: 0.85rem; color: var(--text-muted); }
+
+.comment {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f9fafb;
+}
+
+/* Distinguish the two roles at a glance */
+.comment-researcher { border-left: 4px solid #b45309; }
+.comment-respondent { border-left: 4px solid var(--primary); }
+
+.comment-meta { margin: 0 0 2px; font-size: 0.78rem; color: var(--text-muted); }
+.comment-text { margin: 0; white-space: pre-wrap; }
+
+/* ===== Buttons ===== */
+
+button {
+  font: inherit;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.primary { background: var(--primary); color: #ffffff; }
+.primary:hover:not(:disabled) { background: var(--primary-hover); }
+
+.secondary { background: var(--surface); color: var(--primary); border-color: var(--primary); }
+.secondary:hover:not(:disabled) { background: #eff6ff; }
+
+.danger { background: var(--danger); color: #ffffff; }
+.danger:hover:not(:disabled) { background: var(--danger-hover); }
+
+button.small { padding: 3px 10px; font-size: 0.82rem; }
+
+/* ===== Footer ===== */
+
+.app-footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+}
+
+.app-footer p { color: var(--text-muted); font-size: 0.8rem; }
+
+/* ===== Dialogs ===== */
+
+dialog {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  max-width: 720px;
+  width: calc(100vw - 48px);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+dialog::backdrop { background: rgba(31, 41, 55, 0.4); }
+
+dialog h2 { margin: 0 0 8px; font-size: 1.1rem; }
+
+.dialog-context { margin: 0 0 12px; color: var(--text-muted); font-size: 0.85rem; }
+
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+.form-row textarea,
+.form-row input[type="text"] {
+  width: 100%;
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.form-error { color: var(--danger); font-size: 0.85rem; margin: 0 0 12px; }
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+/* ===== Version history entries ===== */
+
+.history-content { display: grid; gap: 12px; }
+
+.version-entry {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.version-entry.is-current {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.version-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.version-number { font-weight: 700; color: var(--text); }
+
+.version-note {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.version-value { margin: 0; white-space: pre-wrap; }
+
+.diff-toggle { margin-top: 10px; }
+
+.diff-panel {
+  margin-top: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: #f9fafb;
+}
+
+.diff-heading { margin: 0 0 6px; font-size: 0.85rem; color: var(--text-muted); }
+
+.diff-text { margin: 0 0 6px; line-height: 1.8; }
+
+.diff-removed {
+  background: var(--diff-removed-bg);
+  color: var(--diff-removed-text);
+  text-decoration: line-through;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+
+.diff-added {
+  background: var(--diff-added-bg);
+  color: var(--diff-added-text);
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+
+.diff-legend { margin: 6px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+
+/* ===== Import / validation report ===== */
+
+.import-content { display: grid; gap: 10px; }
+
+.import-file { margin: 0; font-weight: 600; }
+
+.import-counts { margin: 0; padding-left: 20px; }
+
+.report-heading { margin: 4px 0 0; font-size: 0.9rem; }
+
+.report-list { margin: 0; padding-left: 20px; font-size: 0.85rem; }
+
+.report-list.errors li { color: var(--danger); }
+
+.report-list.warnings li { color: #92400e; }
+
+.import-warning {
+  margin: 0;
+  padding: 8px 12px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+/* ===== Utilities ===== */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ===== Compact sector matrix ===== */
+/* A sector-repeated standalone question renders as ONE card: the
+   question text appears once, then one row per sector with the sector
+   name on the left, the answer control in the middle and compact
+   workflow buttons on the right. */
+
+.matrix-table {
+  display: block;
+  margin-top: 12px;
+  border: none;
+  padding: 0;
+  margin-inline: 0;
+  min-inline-size: 0;
+}
+
+.matrix-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(220px, 1.6fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.matrix-row:last-child { border-bottom: none; }
+
+.matrix-label .field-label { display: inline; margin: 0; }
+
+.matrix-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.matrix-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .matrix-row { grid-template-columns: 1fr; }
+  .matrix-actions { justify-content: flex-start; }
+}
