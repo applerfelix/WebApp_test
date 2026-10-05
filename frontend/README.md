@@ -126,9 +126,11 @@ field-level version history.
 - **Statuses**: Draft → Submitted → Revision requested → Revised →
   Accepted (plus a Reopen action from Accepted).
 - **Roles**: switch with the buttons at the top.
-  - *Respondent*: edits and saves answers (unless the unit is
-    Accepted), submits for review, revises after a revision request,
-    adds comments.
+  - *Respondent*: edits and saves answers per unit (unless the unit is
+    Accepted), revises after a revision request, adds comments, and
+    submits the whole questionnaire at once with the form-level
+    **Submit for review** button in the status summary bar (saves all
+    editable units and requires every required field to be filled).
   - *Researcher*: reviews answers and histories, adds comments,
     requests revisions (a comment is required), accepts items, reopens
     accepted items. Researchers do not edit respondent answers.
@@ -206,7 +208,9 @@ and the status summary.
    comments to two different sectors, or by filtering by status).
 5. **Switch roles**: click Respondent/Researcher; the active button
    highlights, and the available actions per unit change (respondent:
-   save/submit; researcher: request revision/accept/reopen).
+   save; researcher: request revision/accept/reopen). The form-level
+   "Submit for review" button in the status summary bar is visible only
+   to the Respondent.
 6. **Save a new answer version**: as Respondent, edit
    `employees_total`, add a change note, save; the current-answer line
    shows "version 2" and "View history" shows two versions with the
@@ -220,10 +224,13 @@ and the status summary.
 9. **Group-level comment**: add a comment on the group unit; it appears
    once under the group (not under each field), alongside the sample
    researcher/respondent comments.
-10. **Submit a revised answer**: as Respondent, change the longtext
-    field in the group and save; the status becomes Revised, then
-    "Submit for review" sets it to Submitted. (The sample description
-    field already contains the version 1 → version 2 revision trail.)
+10. **Form-level submit**: as Respondent, leave at least one required
+    field empty and click the form-level "Submit for review" button;
+    nothing is submitted and the notice lists every empty required
+    field. Fill them in and click again; all editable units (Draft or
+    Revised) are saved and moved to Submitted in one action. (A unit
+    saved after a revision request is Revised and is included in this
+    bulk submit.)
 11. **Compare two text versions**: open "View history" on the policy
     description field, click "Compare with previous version"; removed
     and added words are highlighted distinctly.

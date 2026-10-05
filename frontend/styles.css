@@ -158,6 +158,11 @@ textarea:focus-visible {
 
 .summary-count { font-weight: 700; }
 
+#btn-form-submit {
+  margin-top: 12px;
+  min-width: 160px;
+}
+
 /* ===== Status badges (dark text on light tints for contrast) ===== */
 
 .status-badge {

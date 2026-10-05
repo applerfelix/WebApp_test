@@ -929,6 +929,10 @@ function renderSummary() {
       ])
     )
   );
+
+  // Form-level submit is a Respondent action, only when a spec is loaded.
+  document.getElementById('btn-form-submit').hidden =
+    !(state.role === 'respondent' && state.spec);
 }
 
 function renderQuestionnaire() {
@@ -1189,10 +1193,9 @@ function workflowButtons(inst, status, options) {
 
   const buttons = [];
   if (state.role === 'respondent' && status !== 'accepted') {
+    // Submission happens at the form level (see handleFormSubmit), not
+    // per unit — so each unit only offers a Save button.
     buttons.push(make('primary', 'Save answers', 'save'));
-    if (status === 'draft' || status === 'revised') {
-      buttons.push(make('secondary', 'Submit for review', 'submit'));
-    }
   }
   if (state.role === 'researcher') {
     if (status !== 'accepted' && status !== 'revision_requested') {
@@ -1399,25 +1402,29 @@ function readFieldInput(input, field) {
 /**
  * Save all fields of a review unit.
  * - Required fields may be empty in a DRAFT (required is enforced at
- *   submission time, see handleSubmitUnit).
+ *   submission time, see handleFormSubmit).
  * - A new immutable version is appended ONLY for fields whose value
  *   actually changed; identical answers never create versions.
  * - Comments and status changes never happen here.
  */
-function handleSaveUnit(inst) {
-  if (state.role !== 'respondent' || statusOf(inst.id) === 'accepted') return;
-
-  const noteInput = document.getElementById(`note-${inst.id}`);
-  const changeNote = noteInput ? noteInput.value.trim() : '';
-
+/**
+ * Read a unit's field inputs, validate them, and write answer versions
+ * for any field whose value changed. Shared by the per-unit Save button
+ * and the form-level Submit (which saves before submitting).
+ *
+ * Returns { ok, changedCount, error, field }:
+ *  - ok=false  → a field failed to parse; `field` is the offending field.
+ *  - ok=true   → `changedCount` fields were saved (0 means no changes).
+ *
+ * This function does NOT persist or re-render; the caller decides.
+ */
+function saveUnitFields(inst, changeNote) {
   const updates = [];
   for (const field of inst.fields) {
     const input = document.getElementById(`input-${field.questionInstanceId}`);
     const parsed = readFieldInput(input, field);
     if (!parsed.ok) {
-      setNotice(`Cannot save: ${field.fieldLabel} — ${parsed.error}`);
-      input.focus();
-      return;
+      return { ok: false, changedCount: 0, error: parsed.error, field };
     }
     updates.push({ field, value: parsed.value });
   }
@@ -1425,14 +1432,28 @@ function handleSaveUnit(inst) {
   const changed = updates.filter(
     (u) => u.value !== currentAnswer(u.field.questionInstanceId)
   );
-  if (!changed.length) {
-    setNotice('No changes to save — the answers are identical to the current versions.');
-    return;
-  }
-
   for (const update of changed) {
     state.answers[update.field.questionInstanceId] = update.value;
     createAnswerVersion(update.field, update.value, changeNote);
+  }
+  return { ok: true, changedCount: changed.length, error: null, field: null };
+}
+
+function handleSaveUnit(inst) {
+  if (state.role !== 'respondent' || statusOf(inst.id) === 'accepted') return;
+
+  const noteInput = document.getElementById(`note-${inst.id}`);
+  const changeNote = noteInput ? noteInput.value.trim() : '';
+
+  const result = saveUnitFields(inst, changeNote);
+  if (!result.ok) {
+    setNotice(`Cannot save: ${result.field.fieldLabel} — ${result.error}`);
+    document.getElementById(`input-${result.field.questionInstanceId}`).focus();
+    return;
+  }
+  if (!result.changedCount) {
+    setNotice('No changes to save — the answers are identical to the current versions.');
+    return;
   }
 
   // Respondent saving a changed answer after a revision request moves
@@ -1443,7 +1464,7 @@ function handleSaveUnit(inst) {
 
   persistState();
   renderApp();
-  setNotice(`Saved ${changed.length} new answer version${changed.length === 1 ? '' : 's'} for "${inst.heading}".`);
+  setNotice(`Saved ${result.changedCount} new answer version${result.changedCount === 1 ? '' : 's'} for "${inst.heading}".`);
 }
 
 /**
@@ -1471,30 +1492,58 @@ function createAnswerVersion(field, value, changeNote) {
 }
 
 /**
- * Submit a unit for review. Blocks submission when any required field
- * is still empty. For boolean fields, "No" is a valid populated value;
- * only an empty select counts as unanswered.
+ * Form-level submit: saves the current values of every editable unit,
+ * then submits all of them at once. Blocks (submitting nothing) if any
+ * required field across the editable units is still empty. Accepted and
+ * already-submitted units are left untouched.
  */
-function handleSubmitUnit(inst) {
-  if (state.role !== 'respondent' || statusOf(inst.id) === 'accepted') return;
+function handleFormSubmit() {
+  if (state.role !== 'respondent' || !state.spec) return;
 
-  const missing = inst.fields.filter(
-    (f) => f.required && currentAnswer(f.questionInstanceId) === ''
+  const editable = instances.filter(
+    (i) => statusOf(i.id) === 'draft' || statusOf(i.id) === 'revised'
   );
-  if (missing.length) {
-    setNotice(
-      `Cannot submit: required field "${missing[0].fieldLabel}" has no answer` +
-      (missing.length > 1 ? ` (and ${missing.length - 1} further required field(s) are empty).` : '.')
-    );
-    const firstMissing = document.getElementById(`input-${missing[0].questionInstanceId}`);
-    if (firstMissing) firstMissing.focus();
+  if (!editable.length) {
+    setNotice('Nothing to submit — all units are already submitted or accepted.');
     return;
   }
 
-  state.statuses[inst.id] = 'submitted';
+  // Save every editable unit's current values first, so submission
+  // reflects what is on screen. Abort on the first parse error.
+  for (const inst of editable) {
+    const result = saveUnitFields(inst, '');
+    if (!result.ok) {
+      setNotice(`Cannot submit: ${result.field.fieldLabel} — ${result.error}`);
+      document.getElementById(`input-${result.field.questionInstanceId}`).focus();
+      return;
+    }
+  }
+
+  // Required-field check across all editable units. For boolean fields,
+  // "No" is a valid populated value; only an empty value counts as
+  // unanswered.
+  const missing = [];
+  for (const inst of editable) {
+    for (const f of inst.fields) {
+      if (f.required && currentAnswer(f.questionInstanceId) === '') {
+        missing.push(f);
+      }
+    }
+  }
+  if (missing.length) {
+    const labels = missing.map((f) => `"${f.fieldLabel}"`).join(', ');
+    setNotice(`Cannot submit: required field${missing.length === 1 ? '' : 's'} with no answer: ${labels}.`);
+    const firstInput = document.getElementById(`input-${missing[0].questionInstanceId}`);
+    if (firstInput) firstInput.focus();
+    return;
+  }
+
+  for (const inst of editable) {
+    state.statuses[inst.id] = 'submitted';
+  }
   persistState();
   renderApp();
-  setNotice(`"${inst.heading}" was submitted for review.`);
+  setNotice(`Submitted ${editable.length} unit${editable.length === 1 ? '' : 's'} for review.`);
 }
 
 function handleAcceptUnit(inst) {
@@ -2037,7 +2086,6 @@ function handleQuestionnaireClick(event) {
 
   switch (button.dataset.action) {
     case 'save': handleSaveUnit(inst); break;
-    case 'submit': handleSubmitUnit(inst); break;
     case 'request-revision': openCommentDialog(inst, 'revision'); break;
     case 'accept': handleAcceptUnit(inst); break;
     case 'reopen': handleReopenUnit(inst); break;
@@ -2079,6 +2127,7 @@ function init() {
   document.getElementById('btn-export').addEventListener('click', exportAllData);
   document.getElementById('btn-reset-responses').addEventListener('click', resetResponses);
   document.getElementById('btn-reset-all').addEventListener('click', resetAllData);
+  document.getElementById('btn-form-submit').addEventListener('click', handleFormSubmit);
 
   document.getElementById('status-filter').addEventListener('change', (event) => {
     statusFilter = event.target.value;
